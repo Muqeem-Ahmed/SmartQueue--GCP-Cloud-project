@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: smartqueue-api-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: smartqueue-api
+  template:
+    metadata:
+      labels:
+        app: smartqueue-api
+    spec:
+      containers:
+      - name: smartqueue-api
+        image: us-central1-docker.pkg.dev/smartqueue-495820/smartqueue-repo/smartqueue-api:v1
+        ports:
+        - containerPort: 8080

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartQueue Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-dark text-white">
+
+<div class="container mt-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Doctor / Admin Terminal</h2>
+        <h5>Status: <span id="statusBadge" class="badge bg-success">Active</span></h5>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8 mb-4">
+            <div class="card text-dark h-100">
+                <div class="card-header bg-warning fw-bold">Up Next</div>
+                <div class="card-body text-center p-5">
+                    <h1 class="display-1 text-primary" id="nextDocToken">--</h1>
+                    <h3 id="nextDocName" class="mt-3">Waiting for patients...</h3>
+                    <p class="text-muted fs-5" id="nextDocDept">--</p>
+                    
+                    <button class="btn btn-success btn-lg mt-4 px-5 py-3 fs-4" id="admitBtn" onclick="sendAction('Admit')">
+                        CALL NEXT PATIENT (ADMIT)
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-4">
+            <div class="card text-dark h-100">
+                <div class="card-header bg-secondary text-white fw-bold">Controls</div>
+                <div class="card-body d-flex flex-column justify-content-center gap-3">
+                    <button class="btn btn-warning btn-lg" onclick="sendAction('Break')">Pause: Go On Break</button>
+                    <button class="btn btn-danger btn-lg" onclick="sendAction('Close')">Stop: Close Facility</button>
+                    <button class="btn btn-primary btn-lg mt-4" onclick="sendAction('Admit')">Resume: Active</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Fetch live status every 2 seconds
+    setInterval(async () => {
+        const res = await fetch('/status');
+        const data = await res.json();
+        
+        const badge = document.getElementById('statusBadge');
+        badge.innerText = data.facility_status;
+        if(data.facility_status === 'Active') badge.className = 'badge bg-success';
+        if(data.facility_status === 'On Break') badge.className = 'badge bg-warning text-dark';
+        if(data.facility_status === 'Closed') badge.className = 'badge bg-danger';
+
+        const btn = document.getElementById('admitBtn');
+        if (data.next_patient) {
+            document.getElementById('nextDocToken').innerText = "Token: " + data.next_patient.token;
+            document.getElementById('nextDocName').innerText = data.next_patient.name;
+            document.getElementById('nextDocDept').innerText = "Dept: " + data.next_patient.department;
+            btn.disabled = false;
+        } else {
+            document.getElementById('nextDocToken').innerText = "--";
+            document.getElementById('nextDocName').innerText = "Queue is empty";
+            document.getElementById('nextDocDept').innerText = "--";
+            btn.disabled = true;
+        }
+    }, 2000);
+
+    async function sendAction(actionType) {
+        await fetch('/admin/action', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: actionType })
+        });
+    }
+</script>
+</body>
+</html>

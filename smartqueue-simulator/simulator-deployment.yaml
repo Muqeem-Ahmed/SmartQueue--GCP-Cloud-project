@@ -1,0 +1,18 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: smartqueue-simulator-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: smartqueue-simulator
+  template:
+    metadata:
+      labels:
+        app: smartqueue-simulator
+    spec:
+      serviceAccountName: default   # <--- ADD THIS EXACT LINE HERE
+      containers:
+      - name: smartqueue-simulator
+        image: us-central1-docker.pkg.dev/smartqueue-495820/smartqueue-repo/smartqueue-simulator:v1

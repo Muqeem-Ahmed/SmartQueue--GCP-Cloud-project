@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartQueue Patient Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+<div class="container mt-5">
+    <div id="facilityStatusAlert" class="alert alert-danger text-center fw-bold fs-3 d-none" role="alert">
+        </div>
+
+    <div class="row justify-content-center">
+        <div class="col-md-5 mb-4">
+            <div class="card shadow-sm text-center h-100">
+                <div class="card-header bg-primary text-white fs-5">Now Serving Token</div>
+                <div class="card-body d-flex align-items-center justify-content-center">
+                    <h1 class="display-1 fw-bold text-dark" id="currentServingToken">--</h1>
+                </div>
+                <div class="card-footer text-muted">
+                    Patients in waiting room: <span id="queueLength" class="fw-bold">0</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-5 mb-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body p-4">
+                    <h3 class="text-center mb-4 text-primary">Get Your Token</h3>
+                    
+                    <form id="bookingForm">
+                        <div class="mb-3">
+                            <label for="patientName" class="form-label">Patient Name</label>
+                            <input type="text" class="form-control" id="patientName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="department" class="form-label">Department</label>
+                            <select class="form-select" id="department" required>
+                                <option value="General">General</option>
+                                <option value="Cardiology">Cardiology</option>
+                                <option value="Neurology">Neurology</option>
+                            </select>
+                        </div>
+                        <button type="submit" id="bookBtn" class="btn btn-success w-100 fs-5">Generate Token</button>
+                    </form>
+
+                    <div id="notificationArea" class="alert alert-success mt-4 d-none" role="alert">
+                        <h4 class="alert-heading">Token Generated!</h4>
+                        <p><strong>Token:</strong> <span id="notifyToken" class="fs-4 badge bg-success"></span></p>
+                        <p class="mb-0"><strong>Name:</strong> <span id="notifyName"></span></p>
+                        <p class="mb-0"><strong>Dept:</strong> <span id="notifyDept"></span></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Fetch live status every 2 seconds
+    setInterval(async () => {
+        const res = await fetch('/status');
+        const data = await res.json();
+        
+        // Update Live Numbers
+        document.getElementById('currentServingToken').innerText = data.currently_serving === 0 ? "--" : data.currently_serving;
+        document.getElementById('queueLength').innerText = data.queue_length;
+
+        // Handle Facility Status (Break/Closed)
+        const alertBox = document.getElementById('facilityStatusAlert');
+        const bookBtn = document.getElementById('bookBtn');
+        
+        if (data.facility_status !== "Active") {
+            alertBox.innerText = `FACILITY IS CURRENTLY ${data.facility_status.toUpperCase()}`;
+            alertBox.classList.remove('d-none');
+            if(data.facility_status === "Closed") {
+                bookBtn.disabled = true;
+                bookBtn.innerText = "Closed for Bookings";
+            }
+        } else {
+            alertBox.classList.add('d-none');
+            bookBtn.disabled = false;
+            bookBtn.innerText = "Generate Token";
+        }
+    }, 2000);
+
+    // Handle Form Submission
+    document.getElementById('bookingForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const btn = document.getElementById('bookBtn');
+        btn.disabled = true;
+
+        const res = await fetch('/book', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                patient_name: document.getElementById('patientName').value,
+                department: document.getElementById('department').value
+            })
+        });
+        
+        const data = await res.json();
+        
+        if(res.ok) {
+            // Show Notification
+            document.getElementById('notifyToken').innerText = data.patient.token;
+            document.getElementById('notifyName').innerText = data.patient.name;
+            document.getElementById('notifyDept').innerText = data.patient.department;
+            document.getElementById('notificationArea').classList.remove('d-none');
+            document.getElementById('bookingForm').reset();
+            
+            // Hide notification after 5 seconds
+            setTimeout(() => { document.getElementById('notificationArea').classList.add('d-none'); }, 5000);
+        } else {
+            alert(data.error);
+        }
+        btn.disabled = false;
+    });
+</script>
+</body>
+</html>
